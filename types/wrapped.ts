@@ -25,10 +25,16 @@ export interface ReplyGuyData {
   isMock: boolean;
 }
 
+export interface Classification {
+  level: number;
+  title: string;
+}
+
 export interface TwitterRankData {
   rank: number;
   percentile: number;
   category: string;
+  classification: Classification;
 }
 
 export interface WrappedData {

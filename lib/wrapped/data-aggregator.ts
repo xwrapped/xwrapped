@@ -2,6 +2,17 @@ import { UserProfile, TwitterRankData, WrappedData } from '@/types/wrapped';
 import { getMockPersona, getMockReplyGuy } from './mock-data';
 
 /**
+ * Get yapper classification based on tweet count.
+ */
+function getClassification(tweetCount: number): { level: number; title: string } {
+  if (tweetCount >= 10000) return { level: 5, title: 'XLegend' };
+  if (tweetCount >= 5000) return { level: 4, title: 'GMI' };
+  if (tweetCount >= 3000) return { level: 3, title: 'Politician' };
+  if (tweetCount >= 1000) return { level: 2, title: 'D1 Yapper' };
+  return { level: 1, title: 'Sub Yapper' };
+}
+
+/**
  * Calculate Twitter rank based on user metrics.
  * Uses engagement score (followers + tweets) to estimate ranking.
  */
@@ -27,7 +38,9 @@ function calculateRank(metrics: UserProfile['metrics']): TwitterRankData {
     category = 'Activity';
   }
 
-  return { rank: estimatedRank, percentile, category };
+  const classification = getClassification(tweetCount);
+
+  return { rank: estimatedRank, percentile, category, classification };
 }
 
 /**
