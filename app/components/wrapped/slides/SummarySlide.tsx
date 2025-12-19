@@ -24,6 +24,7 @@ export default function SummarySlide({ data }: SlideProps) {
           speed={0.6}
           edgeFade={0.25}
           transparent={true}
+          className=""
           style={{ width: '100%', height: '100%' }}
         />
       </div>
