@@ -1,4 +1,18 @@
-import { PersonaData, ReplyGuyData, TwitterRankData } from '@/types/wrapped';
+import { PersonaData, ReplyGuyData, TwitterRankData, UserProfile } from '@/types/wrapped';
+
+export function getMockUserProfile(): UserProfile {
+  return {
+    name: "Demo User",
+    username: "demo_user",
+    profileImageUrl: undefined,
+    metrics: {
+      followersCount: 1234,
+      followingCount: 567,
+      tweetCount: 8901,
+      listedCount: 23
+    }
+  };
+}
 
 export function getMockPersona(): PersonaData {
   const personas = [
