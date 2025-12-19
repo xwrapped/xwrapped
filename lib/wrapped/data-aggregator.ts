@@ -1,6 +1,69 @@
-import { UserProfile, TwitterRankData, WrappedData } from '@/types/wrapped';
+import { UserProfile, TwitterRankData, WrappedData, ReplyGuyData } from '@/types/wrapped';
 import { getMockPersona, getMockReplyGuy } from './mock-data';
 import { calculatePersona } from './persona-calculator';
+
+/**
+ * Fetch replies to a user's tweets and find the top "reply guy"
+ * Uses Twitter API v2 search endpoint
+ * Note: Only searches last 7 days of data
+ */
+async function fetchReplyGuy(username: string, accessToken: string): Promise<ReplyGuyData> {
+  // Search for replies to this user (excluding their own replies)
+  const query = encodeURIComponent(`to:${username} -from:${username}`);
+  const url = `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=100&expansions=author_id&user.fields=name,username,profile_image_url`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('[ReplyGuy] Twitter search API error:', error);
+    throw new Error(`Twitter API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.data || data.data.length === 0) {
+    console.log('[ReplyGuy] No replies found');
+    throw new Error('No replies found');
+  }
+
+  // Count replies per author
+  const replyCounts = new Map<string, number>();
+  for (const tweet of data.data) {
+    const authorId = tweet.author_id;
+    replyCounts.set(authorId, (replyCounts.get(authorId) || 0) + 1);
+  }
+
+  // Find the top reply guy
+  let topAuthorId = '';
+  let topCount = 0;
+  for (const [authorId, count] of replyCounts) {
+    if (count > topCount) {
+      topCount = count;
+      topAuthorId = authorId;
+    }
+  }
+
+  // Get user info from includes
+  const users = data.includes?.users || [];
+  const topUser = users.find((u: { id: string }) => u.id === topAuthorId);
+
+  if (!topUser) {
+    throw new Error('Could not find user info for top replier');
+  }
+
+  return {
+    username: topUser.username,
+    name: topUser.name,
+    profileImageUrl: topUser.profile_image_url,
+    replyCount: topCount,
+    isMock: false,
+  };
+}
 
 /**
  * Get yapper classification based on tweet count.
@@ -69,8 +132,17 @@ export async function aggregateWrappedData(
     persona = getMockPersona();
   }
 
-  // TODO: Replace these with real implementations
-  const replyGuy = getMockReplyGuy(user.username);
+  // Fetch real reply guy data (with fallback to mock)
+  let replyGuy;
+  try {
+    console.log(`[Aggregator] Fetching reply guy for @${user.username}`);
+    replyGuy = await fetchReplyGuy(user.username, accessToken);
+    console.log(`[Aggregator] Top reply guy: @${replyGuy.username} (${replyGuy.replyCount} replies)`);
+  } catch (error) {
+    console.error('[Aggregator] Reply guy fetch failed, using mock data:', error);
+    replyGuy = getMockReplyGuy(user.username);
+  }
+
   const rank = calculateRank(user.metrics);
 
   return {
